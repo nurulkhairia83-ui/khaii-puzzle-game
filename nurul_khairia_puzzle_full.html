@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Nurul Khairia Puzzle Game</title>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+}
+
+h1 { margin-top: 15px; }
+
+#controls { margin: 10px; }
+
+#puzzle {
+  margin: auto;
+  display: grid;
+  gap: 5px;
+  justify-content: center;
+}
+
+.tile {
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.tile:active { transform: scale(0.9); }
+
+.empty {
+  background: transparent;
+  cursor: default;
+}
+
+button, select, input {
+  padding: 8px;
+  margin: 5px;
+  border-radius: 10px;
+  border: none;
+}
+
+#timer, #best {
+  margin-top: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎮 Nurul Khairia Puzzle Game</h1>
+
+<div id="controls">
+  <select id="level" onchange="changeLevel()">
+    <option value="3">3x3</option>
+    <option value="4">4x4</option>
+  </select>
+
+  <input type="file" accept="image/*" onchange="loadImage(event)">
+  <button onclick="shuffle()">Acak</button>
+</div>
+
+<div id="timer">⏱️ 0 detik</div>
+<div id="best">🏆 Best: -</div>
+
+<div id="puzzle"></div>
+
+<script>
+let size = 3;
+let tiles = [];
+let timer = 0;
+let interval = null;
+let image = "";
+
+function init() {
+  tiles = [];
+  for (let i = 1; i < size * size; i++) tiles.push(i);
+  tiles.push(null);
+  render();
+  loadBest();
+}
+
+function render() {
+  const puzzle = document.getElementById("puzzle");
+  puzzle.innerHTML = "";
+  puzzle.style.gridTemplateColumns = `repeat(${size}, 80px)`;
+
+  tiles.forEach((tile, index) => {
+    const div = document.createElement("div");
+    div.className = "tile";
+
+    if (tile === null) {
+      div.classList.add("empty");
+    } else {
+      if (image) {
+        const row = Math.floor((tile - 1) / size);
+        const col = (tile - 1) % size;
+        div.style.backgroundImage = `url(${image})`;
+        div.style.backgroundSize = `${size * 80}px`;
+        div.style.backgroundPosition = `-${col * 80}px -${row * 80}px`;
+      } else {
+        div.style.background = "#4CAF50";
+        div.innerHTML = `<span style="color:white;font-size:20px">${tile}</span>`;
+      }
+      div.onclick = () => move(index);
+    }
+
+    div.style.width = "80px";
+    div.style.height = "80px";
+    puzzle.appendChild(div);
+  });
+}
+
+function move(index) {
+  const emptyIndex = tiles.indexOf(null);
+  const validMoves = [
+    emptyIndex - 1,
+    emptyIndex + 1,
+    emptyIndex - size,
+    emptyIndex + size
+  ];
+
+  if (validMoves.includes(index)) {
+    [tiles[index], tiles[emptyIndex]] = [tiles[emptyIndex], tiles[index]];
+    render();
+    checkWin();
+  }
+}
+
+function shuffle() {
+  tiles.sort(() => Math.random() - 0.5);
+  timer = 0;
+
+  if (interval) clearInterval(interval);
+  interval = setInterval(() => {
+    timer++;
+    document.getElementById("timer").textContent = "⏱️ " + timer + " detik";
+  }, 1000);
+
+  render();
+}
+
+function checkWin() {
+  const win = [];
+  for (let i = 1; i < size * size; i++) win.push(i);
+  win.push(null);
+
+  if (JSON.stringify(tiles) === JSON.stringify(win)) {
+    clearInterval(interval);
+    saveBest();
+    setTimeout(() => {
+      alert("🎉 Menang dalam " + timer + " detik!");
+    }, 200);
+  }
+}
+
+function changeLevel() {
+  size = parseInt(document.getElementById("level").value);
+  init();
+}
+
+function loadImage(event) {
+  const file = event.target.files[0];
+  if (file) {
+    image = URL.createObjectURL(file);
+    render();
+  }
+}
+
+function saveBest() {
+  const key = "best_" + size;
+  const best = localStorage.getItem(key);
+
+  if (!best || timer < best) {
+    localStorage.setItem(key, timer);
+  }
+  loadBest();
+}
+
+function loadBest() {
+  const key = "best_" + size;
+  const best = localStorage.getItem(key);
+  document.getElementById("best").textContent =
+    "🏆 Best: " + (best ? best + " detik" : "-");
+}
+
+init();
+</script>
+
+</body>
+</html>
